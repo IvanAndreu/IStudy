@@ -1,4 +1,3 @@
-
 Independent study ideas.
 
 -   Theoretical background and literary review for my QP.
