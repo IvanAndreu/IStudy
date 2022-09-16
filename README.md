@@ -1,6 +1,12 @@
-Independent study ideas. 
+Independent study ideas.
 
-- Theoretical background and literary review for my QP. 
-- Improve skills in R (Maybe start writting the paper in R?) 
-- Learn Psychopy
-- Maybe help with another project? - to put in practice the skills? 
+-   Theoretical background and literary review for my QP.
+    -   reread Diehl and Lotto (speech perception) thinking
+-   Improve skills in R
+    -   getting, cleaning data
+    -   project mangement (github)
+    -   papaja, quarto (for writing), refs, crossrefs, figures and
+        tables
+    -   template for QP (papaja)
+-   Learn Psychopy
+-   Maybe help with another project? - to put in practice the skills?
