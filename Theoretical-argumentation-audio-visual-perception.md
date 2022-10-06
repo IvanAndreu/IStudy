@@ -3,7 +3,11 @@ Theoretical argumentation / audio-visual perception
 Yo
 2022-09-20
 
+<<<<<<< HEAD
 # Motor Theory
+=======
+\#Motor Theory
+>>>>>>> 1951204f8c6249d401d452ca677e440cfabd8dd5
 
 Liberman et al, (1967) claims that objects of speech perception are
 articulatory rather than acoustic or auditory events, defining gestures
@@ -15,10 +19,14 @@ The theory states that if the speaker is able to determine the gesture
 that was produced, then s/he will be able to determine the sound. In
 other words we map acoustic signals to the gestures that produce it.
 Perceived similarities will correspond more closely to the articulatory
+<<<<<<< HEAD
 than the acoustic similarities.
 
 Fowler (1969) “Listeners perceive gestures, and some gestures are
 specified optically as well as acoustically” (p.1733)
+=======
+than the acustic similarities.
+>>>>>>> 1951204f8c6249d401d452ca677e440cfabd8dd5
 
 The model suggests that there is a speech perception module that
 monitors incoming acustic stimulation.
@@ -39,6 +47,7 @@ asimilate, but rather coarticulate.
 
 If there is no device that help us processing, humans may use all the
 information available to obtain meaning.
+<<<<<<< HEAD
 
 # Second Language Linguistic Perception model
 
@@ -61,3 +70,5 @@ asimilate to Spanish /i/
 
 Does audiovisual input facilitate perception when the syllable and word
 boundary offer double alignment options? Does proficiency play a role?
+=======
+>>>>>>> 1951204f8c6249d401d452ca677e440cfabd8dd5
