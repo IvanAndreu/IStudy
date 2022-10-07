@@ -1,0 +1,41 @@
+---
+title: "Resyllabification stimuli assessment"
+format: html
+editor: visual
+execute: 
+  warning: false
+  message: false
+---
+
+```{r}
+library("tidyverse")
+library("here")
+library("janitor")
+
+v_cv <- c(
+  "la_salas", "busca_sobras", "era_sancho", "quiere_socio", "quiza_surja", 
+  "tiene_sodio", "ve_sosos", "Si_nego", "Ve_nalgas", "Ve_nanas", "Ve_narcos", 
+  "Ve_naves"
+)
+
+phon_s <- c(
+  "la_salas", "las_alas", "buscas_obras", "busca_sobras", "era_sancho", 
+  "eras_ancho", "quieres_ocio", "quiere_socio", "quizas_urja", "quiza_surja", 
+  "tiene_sodio", "tienes_odio", "ves_osos", "ve_sosos"
+)
+
+dat <- read_csv(here("Stimuli", "Study 3", "Alejandro", "data.csv")) %>% 
+  clean_names() %>% 
+  rename(item = s) %>% 
+  filter(!is.na(item), item != "/n/") %>% 
+  mutate(across(-item, as.numeric)) %>% 
+  pivot_longer(cols = -item, names_to = "metric", values_to = "vals") %>% 
+  mutate(context = if_else(item %in% v_cv, "v_cv", "c_vc"), 
+         phon = if_else(item %in% phon_s, "s", "n")) 
+
+dat %>% 
+  ggplot() + 
+  aes(x = context, y = vals) + 
+  facet_wrap(phon ~ metric, scales = "free_y", nrow = 2) + 
+  stat_summary(fun.data = mean_se, geom = "pointrange")
+```
