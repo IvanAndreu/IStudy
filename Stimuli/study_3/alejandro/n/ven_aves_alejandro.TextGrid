@@ -1,0 +1,60 @@
+File type = "ooTextFile"
+Object class = "TextGrid"
+
+xmin = 0 
+xmax = 0.44383333333333336 
+tiers? <exists> 
+size = 2 
+item []: 
+    item [1]:
+        class = "IntervalTier" 
+        name = "item" 
+        xmin = 0 
+        xmax = 0.44383333333333336 
+        intervals: size = 7 
+        intervals [1]:
+            xmin = 0 
+            xmax = 0.06859045544399148 
+            text = "" 
+        intervals [2]:
+            xmin = 0.06859045544399148 
+            xmax = 0.12287801136880651 
+            text = "e" 
+        intervals [3]:
+            xmin = 0.12287801136880651 
+            xmax = 0.12383928996875604 
+            text = "" 
+        intervals [4]:
+            xmin = 0.12383928996875604 
+            xmax = 0.16177120254596122 
+            text = "n" 
+        intervals [5]:
+            xmin = 0.16177120254596122 
+            xmax = 0.16245706510849695 
+            text = "" 
+        intervals [6]:
+            xmin = 0.16245706510849695 
+            xmax = 0.24814439205602729 
+            text = "a" 
+        intervals [7]:
+            xmin = 0.24814439205602729 
+            xmax = 0.44383333333333336 
+            text = "" 
+    item [2]:
+        class = "IntervalTier" 
+        name = "dur" 
+        xmin = 0 
+        xmax = 0.44383333333333336 
+        intervals: size = 3 
+        intervals [1]:
+            xmin = 0 
+            xmax = 0.06859045544399148 
+            text = "" 
+        intervals [2]:
+            xmin = 0.06859045544399148 
+            xmax = 0.24814439205602729 
+            text = "duration" 
+        intervals [3]:
+            xmin = 0.24814439205602729 
+            xmax = 0.44383333333333336 
+            text = "" 
