@@ -35,10 +35,12 @@ Create Strings as file list... dirFiles 'file_directory$'/*.wav
 select Strings dirFiles
 numberOfFiles = Get number of strings
 writeInfoLine: "filename,duration_v1,duration_c1,duration_v2,duration,
+...f0_v1_mp,f0_v2_mp,
+...in_v1_mp,in_c1_mp,in_v2_mp,
 ...f0_00,f0_05,f0_10,f0_15,f0_20,f0_25,f0_30,f0_35,f0_40,f0_45,f0_50,f0_55,
-...f0_60,f0_65,f0_70,f0_75,f0_80,f0_85,f0_90,f0_95,f0_100,in_00,in_05,in_10,
-...in_15,in_20,in_25,in_30,in_35,in_40,in_45,in_50,in_55,in_60,in_65,in_70,
-...in_75,in_80,in_85,in_90,in_95,in_100"
+...f0_60,f0_65,f0_70,f0_75,f0_80,f0_85,f0_90,f0_95,f0_100,
+...in_00,in_05,in_10,in_15,in_20,in_25,in_30,in_35,in_40,in_45,in_50,in_55,
+...in_60,in_65,in_70,in_75,in_80,in_85,in_90,in_95,in_100"
 
 # -----------------------------------------------------------------------------
 
@@ -118,6 +120,8 @@ for file to numberOfFiles
 	#
 
 	select Pitch 'prefix$'
+	f0_v1_mp = Get value at time... mp_v1 Hertz Linear
+	f0_v2_mp = Get value at time... mp_v2 Hertz Linear
 	f0_00 = Get value at time... start Hertz Linear
 	f0_05 = Get value at time... perc_05 Hertz Linear
 	f0_10 = Get value at time... perc_10 Hertz Linear
@@ -145,8 +149,9 @@ for file to numberOfFiles
 	#
 
 	select Intensity 'prefix$'
-	# intensity:
-	select Intensity 'prefix$'
+	in_v1_mp = Get value at time... mp_v1 Cubic
+	in_c1_mp = Get value at time... mp_c1 Cubic
+	in_v2_mp = Get value at time... mp_v2 Cubic
 	in_00 = Get value at time... start Cubic
 	in_05 = Get value at time... perc_05 Cubic
 	in_10 = Get value at time... perc_10 Cubic
@@ -170,11 +175,14 @@ for file to numberOfFiles
 	in_100 = Get value at time... end Cubic
 
 	appendInfo: "'prefix$','duration_v1','duration_c1','duration_v2','duration',
+	...'f0_v1_mp','f0_v2_mp',
+	...'in_v1_mp','in_c1_mp','in_v2_mp',
 	...'f0_00','f0_05','f0_10','f0_15','f0_20','f0_25','f0_30','f0_35','f0_40',
 	...'f0_45','f0_50','f0_55','f0_60','f0_65','f0_70','f0_75','f0_80','f0_85',
-	...'f0_90','f0_95','f0_100','in_00','in_05','in_10','in_15','in_20','in_25',
-	...'in_30','in_35','in_40','in_45','in_50','in_55','in_60','in_65','in_70',
-	...'in_75','in_80','in_85','in_90','in_95','in_100''newline$'"
+	...'f0_90','f0_95','f0_100',
+	...'in_00','in_05','in_10','in_15','in_20','in_25','in_30','in_35','in_40',
+	...'in_45','in_50','in_55','in_60','in_65','in_70','in_75','in_80','in_85',
+	...'in_90','in_95','in_100''newline$'"
 
 endfor
 
