@@ -2,7 +2,7 @@ File type = "ooTextFile"
 Object class = "TextGrid"
 
 xmin = 0 
-xmax = 6.216645833333334 
+xmax = 1.0442708333333333 
 tiers? <exists> 
 size = 2 
 item []: 
@@ -10,51 +10,51 @@ item []:
         class = "IntervalTier" 
         name = "item" 
         xmin = 0 
-        xmax = 6.216645833333334 
+        xmax = 1.0442708333333333 
         intervals: size = 7 
         intervals [1]:
             xmin = 0 
-            xmax = 1.5580172552152762 
+            xmax = 0.2060513620706374 
             text = "" 
         intervals [2]:
-            xmin = 1.5580172552152762 
-            xmax = 1.6526688986138034 
+            xmin = 0.2060513620706374 
+            xmax = 0.2980038642447556 
             text = "a" 
         intervals [3]:
-            xmin = 1.6526688986138034 
-            xmax = 1.6569129079703369 
+            xmin = 0.2980038642447556 
+            xmax = 0.30083536801208033 
             text = "" 
         intervals [4]:
-            xmin = 1.6569129079703369 
-            xmax = 1.7663118668231934 
+            xmin = 0.30083536801208033 
+            xmax = 0.4164338060773725 
             text = "s" 
         intervals [5]:
-            xmin = 1.7663118668231934 
-            xmax = 1.7728640207914017 
+            xmin = 0.4164338060773725 
+            xmax = 0.4195214276257132 
             text = "" 
         intervals [6]:
-            xmin = 1.7728640207914017 
-            xmax = 1.8886163490239956 
+            xmin = 0.4195214276257132 
+            xmax = 0.5365590697447123 
             text = "a" 
         intervals [7]:
-            xmin = 1.8886163490239956 
-            xmax = 6.216645833333334 
+            xmin = 0.5365590697447123 
+            xmax = 1.0442708333333333 
             text = "" 
     item [2]:
         class = "IntervalTier" 
         name = "dur" 
         xmin = 0 
-        xmax = 6.216645833333334 
+        xmax = 1.0442708333333333 
         intervals: size = 3 
         intervals [1]:
             xmin = 0 
-            xmax = 1.5580172552152762 
+            xmax = 0.2060513620706374 
             text = "" 
         intervals [2]:
-            xmin = 1.5580172552152762 
-            xmax = 1.8886163490239956 
-            text = "duration" 
+            xmin = 0.2060513620706374 
+            xmax = 0.5365590697447123 
+            text = "la salas" 
         intervals [3]:
-            xmin = 1.8886163490239956 
-            xmax = 6.216645833333334 
+            xmin = 0.5365590697447123 
+            xmax = 1.0442708333333333 
             text = "" 
