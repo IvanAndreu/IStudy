@@ -1,0 +1,696 @@
+---
+title: "Pilot data analyses"
+format: html
+editor: visual
+toc: true
+---
+
+## Load packages
+
+```{r}
+#| label: load-libs
+#| warning: false
+#| message: false
+
+library("tidyverse")
+library("here")
+library("fs")
+library("purrr")
+library("glue")
+library("brms")
+library("bayestestR")
+library("tidybayes")
+library("ggdist")
+library("emmeans")
+
+```
+
+## Get data
+
+```{r}
+#| label: load-csvs
+
+prolific_key <- "s3_pilot_2022-10-19"
+
+pilot_data_raw_prolific <-
+  dir_ls(path = here("..", "s3_pilot", "data"), regexp = "\\.csv$") %>% 
+  as_tibble() %>% 
+  filter(grepl(prolific_key, value)) %>% 
+  map_dfr(read_csv)
+  
+pilot_data_raw_ivan <-
+  dir_ls(path = here("..", "s3_pilot", "data"), regexp = "\\.csv$") %>% 
+  as_tibble() %>% 
+  filter(!grepl(prolific_key, value)) %>% 
+  map_dfr(read_csv, id = "source", 
+    col_types = cols(.default = "?", participant = "c")) 
+
+```
+
+## Tidy data
+
+```{r}
+#| label: tidy-data
+
+pilot_data <- bind_rows(
+  pilot_data_raw_prolific %>% 
+  select(
+    participant, stimuli, speaker, item, context, phon, left_side, right_side, 
+    correct_response, response = key_resp_trial.keys, 
+    is_correct = key_resp_trial.corr, rt = key_resp_trial.rt) %>% 
+  filter(!is.na(stimuli)) %>% 
+  transmute(
+    participant,
+    stimuli = str_remove_all(stimuli, "./wavs/"), 
+    stimuli = str_remove_all(stimuli, ".wav"), 
+    speaker, item, context, 
+    context_sum = if_else(context == "v_cv", -1, 1), 
+    phon, 
+    phon_sum = if_else(phon == "n", -1, 1), 
+    left_side, right_side, correct_response, response, is_correct, rt
+  ),
+  pilot_data_raw_ivan %>% 
+  select(
+    participant, stimuli, speaker, item, context, phon, left_side, right_side, 
+    correct_response, response = key_resp_trial.keys, 
+    is_correct = key_resp_trial.corr, rt = key_resp_trial.rt) %>% 
+  filter(!is.na(stimuli)) %>% 
+  transmute(
+    participant,
+    stimuli = str_remove_all(stimuli, "./wavs/"), 
+    stimuli = str_remove_all(stimuli, ".wav"), 
+    speaker, item, context, 
+    context_sum = if_else(context == "v_cv", -1, 1), 
+    phon, 
+    phon_sum = if_else(phon == "n", -1, 1), 
+    left_side, right_side, correct_response, response, is_correct, rt
+  )
+)
+
+```
+
+## Plots
+
+### Accuracy
+
+```{r}
+#| label: plots
+
+speaker_means <- pilot_data %>% 
+  group_by(participant, context) %>% 
+  summarize(prop = mean(is_correct), .groups = "drop")
+
+pilot_data %>% 
+  ggplot() + 
+  aes(x = context, y = is_correct, color = context) + 
+  geom_hline(yintercept = 0.5, lty = 3) + 
+  geom_point(data = speaker_means, aes(y = prop), 
+    position = position_jitter(width = 0.3), alpha = 0.4) + 
+  stat_summary(fun.data = mean_se, geom = "pointrange") + 
+  scale_color_viridis_d(option = "C", end = 0.8) + 
+  coord_cartesian(ylim = c(0, 1)) + 
+  ds4ling::ds4ling_bw_theme()
+
+speaker_context_phon_means <- pilot_data %>% 
+  group_by(participant, context, phon) %>% 
+  summarize(prop = mean(is_correct), .groups = "drop")
+
+pilot_data %>% 
+  ggplot() + 
+  aes(x = context, y = is_correct, color = phon) + 
+  geom_hline(yintercept = 0.5, lty = 3) + 
+  geom_point(data = speaker_context_phon_means, aes(y = prop), 
+    position = position_jitter(width = 0.3), alpha = 0.2) + 
+  stat_summary(fun.data = mean_cl_boot, geom = "pointrange", pch = 21, 
+    fill = "white", position = position_dodge(0.5)) + 
+  scale_color_viridis_d(option = "C", end = 0.8) + 
+  coord_cartesian(ylim = c(0, 1)) + 
+  ds4ling::ds4ling_bw_theme()
+
+```
+
+## Descriptives
+
+There are `r pilot_data$participant %>% unique %>% length` participants.
+
+```{r}
+#| label: get-cheaters
+#| include: false
+cheaters <- speaker_means %>% 
+  filter(prop == 1 | prop == 0) %>% 
+  pull(participant) %>% 
+  unique()
+```
+
+There are `r cheaters %>% length` cheaters.
+
+```{r}
+#| label: descriptives-tables
+#| echo: false
+
+pilot_data %>% 
+  summarize(prop = mean_se(is_correct), .groups = "drop") %>% 
+  mutate(across(everything(), round, digits = 2)) %>% 
+  transmute(Mean = prop$y, 
+    SE = glue::glue("[{prop$ymin}, {prop$ymax}]")) %>% 
+  knitr::kable()
+
+pilot_data %>% 
+  group_by(context) %>% 
+  summarize(prop = mean_se(is_correct), .groups = "drop") %>% 
+  mutate(across(-context, round, digits = 2)) %>% 
+  transmute(Context = context, Mean = prop$y, 
+    SE = glue::glue("[{prop$ymin}, {prop$ymax}]")) %>% 
+  knitr::kable()
+
+
+pilot_data %>% 
+  group_by(context, phon) %>% 
+  summarize(prop = mean_se(is_correct), .groups = "drop") %>% 
+  mutate(across(-c("context", "phon"), round, digits = 2)) %>% 
+  transmute(Context = context, Segment = phon, Mean = prop$y, 
+    SE = glue::glue("[{prop$ymin}, {prop$ymax}]")) %>% 
+  knitr::kable()
+
+```
+
+## Models
+
+### Intercept-only model
+
+```{r}
+#| label: simple-mod
+
+# model formula
+bf_mod_null <- bf(
+  is_correct ~ 0 + Intercept + 
+    (1 | participant) + 
+    (1 | speaker) + 
+    (1 | item)
+)
+
+# Get priors
+get_prior(
+  formula = bf_mod_null, 
+  family = bernoulli(link = "logit"), 
+  data = pilot_data
+) %>% 
+  as_tibble() %>% 
+  select(prior, class, coef) %>% 
+  knitr::kable(format = "pandoc")
+
+prior_mod_null <- c(
+  prior(normal(0, 1), class = "b"), 
+  prior(cauchy(0, 0.2), class = "sd")
+)
+
+mod_null <- brm(
+  formula = bf_mod_null, 
+  family = bernoulli(link = "logit"), 
+  prior = prior_mod_null, 
+  iter = 2000, warmup = 1000, cores = 4, threads = threading(2), 
+  backend = "cmdstanr", 
+  control = list(adapt_delta = 0.99), 
+  data = pilot_data, 
+  file = here("models", "mod_null")
+)
+
+post_mod_null <- as_draws_df(mod_null) %>% 
+  select(starts_with("b_")) %>% 
+  mutate(intercept_prop = plogis(b_Intercept)) %>% 
+  pivot_longer(cols = everything(), names_to = "term", values_to = "estimate")
+
+post_mod_null_tbl <- post_mod_null %>% 
+  group_by(term) %>% 
+  median_qi() %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  transmute(term, estimate, .lower, .upper, 
+    print_out = glue("{estimate} [{.lower}, {.upper}]"))
+
+post_mod_null %>% 
+  filter(term == "intercept_prop") %>% 
+  ggplot() + 
+  aes(x = estimate, y = term, fill = stat(x <= 0.51)) + 
+  geom_vline(xintercept = 0.5, lty = 3) + 
+  geom_rect(data = tibble(xmin = 0.49, xmax = 0.51), 
+    inherit.aes = F, fill = "lightblue", color = "white", alpha = 0.2,
+    aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf)) +
+  stat_halfeye(show.legend = F, pch = 21, point_fill = "white") + 
+  scale_fill_manual(values = viridis::viridis_pal(
+    option = "D", begin = 0.3, end = 0.8)(2)) + 
+  coord_cartesian(xlim = c(0, 1)) + 
+  labs(y = NULL, x = "P(correct)") + 
+  ds4ling::ds4ling_bw_theme()
+
+as_draws_df(mod_null) %>% 
+  select(starts_with("r_participant")) %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "participant", values_to = "estimate") %>% 
+  mutate(participant = str_remove_all(participant, "r_participant\\["), 
+    participant = str_remove_all(participant, ",Intercept\\]"), 
+    participant = fct_reorder(participant, estimate, median)) %>% 
+  ggplot() + 
+  aes(x = estimate, y = participant) + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  stat_pointinterval(show.legend = F, point_size = 1.5, pch = 21, 
+    point_fill = "white") + 
+  coord_cartesian(xlim = c(-0.3, 0.3)) + 
+  ds4ling::ds4ling_bw_theme() + 
+  theme(axis.ticks.y = element_blank(), axis.text.y = element_blank())
+
+as_draws_df(mod_null) %>% 
+  select(starts_with("r_item")) %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "item", values_to = "estimate") %>% 
+  mutate(item = str_remove_all(item, "r_item\\["), 
+    item = str_remove_all(item, ",Intercept\\]"), 
+    item = fct_reorder(item, estimate, median)) %>% 
+  ggplot() + 
+  aes(x = estimate, y = item) + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  stat_halfeye(show.legend = F, pch = 21, point_fill = "white") + 
+  coord_cartesian(xlim = c(-2.5, 2.5)) + 
+  ds4ling::ds4ling_bw_theme()
+
+as_draws_df(mod_null) %>% 
+  select(starts_with("r_speaker")) %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "speaker", values_to = "estimate") %>% 
+  mutate(speaker = str_remove_all(speaker, "r_speaker\\["), 
+    speaker = str_remove_all(speaker, ",Intercept\\]"), 
+    speaker = fct_reorder(speaker, estimate, median)) %>% 
+  ggplot() + 
+  aes(x = estimate, y = speaker) + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  stat_halfeye(show.legend = F, pch = 21, point_fill = "white") + 
+  coord_cartesian(xlim = c(-0.5, 0.5)) + 
+  ds4ling::ds4ling_bw_theme()
+
+```
+
+The model intercept is `r post_mod_null_tbl$print_out[2]` in the probability space. This means that given the data, the model, and our prior assumptions, we are 95% confident that the true estimate is between `r post_mod_null_tbl$.lower[2]` and `r post_mod_null_tbl$.upper[2]`.
+Now we include the phonetic context to account for resyllabification. 
+
+
+
+### Context model
+
+
+```{r}
+#| label: context-mod
+
+# model formula
+bf_mod_context <- bf(
+  is_correct ~ 0 + Intercept + context_sum + 
+    (1 + context_sum | participant) + 
+    (1 + context_sum | speaker) + 
+    (1 | item)
+)
+
+# Get priors
+get_prior(
+  formula = bf_mod_context, 
+  family = bernoulli(link = "logit"), 
+  data = pilot_data
+) %>% 
+  as_tibble() %>% 
+  select(prior, class, coef) %>% 
+  knitr::kable(format = "pandoc")
+
+prior_mod_context <- c(
+  prior(normal(0, 1), class = "b"), 
+  prior(cauchy(0, 0.2), class = "sd"), 
+  prior(lkj(1), class = "cor")
+)
+
+mod_context <- brm(
+  formula = bf_mod_context, 
+  family = bernoulli(link = "logit"), 
+  prior = prior_mod_context, 
+  iter = 2000, warmup = 1000, cores = 4, threads = threading(2), 
+  backend = "cmdstanr", 
+  control = list(adapt_delta = 0.99), 
+  data = pilot_data, 
+  file = here("models", "mod_context")
+)
+
+post_mod_context <- as_draws_df(mod_context) %>% 
+  select(starts_with("b_")) %>% 
+  pivot_longer(cols = everything(), names_to = "term", values_to = "estimate") 
+
+post_mod_context_tbl <- post_mod_context %>% 
+  group_by(term) %>% 
+  median_qi() %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  transmute(term, estimate, .lower, .upper, 
+    print_out = glue("{estimate} [{.lower}, {.upper}]"))
+
+post_mod_context %>% 
+  ggplot() + 
+  aes(x = estimate, y = term, fill = stat(x <= 0.1 & x >= -0.1)) + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  geom_rect(data = tibble(xmin = -0.1, xmax = 0.1), 
+    inherit.aes = F, fill = "lightblue", color = "white", alpha = 0.2,
+    aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf)) +
+  stat_halfeye(show.legend = F, pch = 21, point_fill = "white") + 
+  scale_fill_manual(values = viridis::viridis_pal(
+    option = "D", begin = 0.3, end = 0.8)(2)) + 
+  coord_cartesian(xlim = c(-1, 1)) + 
+  labs(y = NULL, x = "P(correct)") + 
+  ds4ling::ds4ling_bw_theme()
+
+as_draws_df(mod_context) %>% 
+  select(starts_with("r_participant")) %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "participant", values_to = "estimate") %>% 
+  mutate(participant = str_remove_all(participant, "r_participant\\["), 
+    participant = str_remove_all(participant, "\\]")) %>% 
+  separate(participant, into = c("participant", "term"), sep = ",") %>% 
+  mutate(participant = fct_reorder(participant, estimate, median), 
+         term = fct_relevel(term, "Intercept")) %>% 
+  ggplot() + 
+  aes(x = estimate, y = participant, fill = term) + 
+  facet_grid(. ~ term, scales = "free_x") + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  stat_pointinterval(show.legend = F, pch = 21, point_fill = "white", 
+    point_size = 1.5) + 
+  ds4ling::ds4ling_bw_theme() + 
+  theme(axis.ticks.y = element_blank(), axis.text.y = element_blank())
+
+as_draws_df(mod_context) %>% 
+  select(starts_with("r_item")) %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "item", values_to = "estimate") %>% 
+  mutate(item = str_remove_all(item, "r_item\\["), 
+    item = str_remove_all(item, ",Intercept\\]"), 
+    item = fct_reorder(item, estimate, median)) %>% 
+  ggplot() + 
+  aes(x = estimate, y = item) + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  stat_halfeye(show.legend = F, pch = 21, point_fill = "white") + 
+  coord_cartesian(xlim = c(-2.5, 2.5)) + 
+  ds4ling::ds4ling_bw_theme()
+
+as_draws_df(mod_context) %>% 
+  select(starts_with("r_speaker")) %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "speaker", values_to = "estimate") %>% 
+  mutate(speaker = str_remove_all(speaker, "r_speaker\\["), 
+    speaker = str_remove_all(speaker, "\\]")) %>% 
+  separate(speaker, into = c("speaker", "term"), sep = ",") %>% 
+  mutate(speaker = fct_reorder(speaker, estimate, median), 
+         term = fct_relevel(term, "Intercept")) %>% 
+  ggplot() + 
+  aes(x = estimate, y = speaker) + 
+  facet_grid(. ~ term, scales = "free_x") + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  stat_halfeye(show.legend = F, pch = 21, point_fill = "white") + 
+  coord_cartesian(xlim = c(-0.5, 0.5)) + 
+  ds4ling::ds4ling_bw_theme()
+
+```
+
+Adding `context` to the model increases the intercept estimate, but also increases our uncertainty about that estimate. 
+Based on the plots from the raw data, this is no surprise. 
+We need to add `phon` and the interaction between `context` and `phon`. 
+
+
+
+
+
+
+
+
+
+
+
+### Phon model
+
+```{r}
+#| label: phon-mod
+
+# model formula
+bf_mod_phon <- bf(
+  is_correct ~ 0 + Intercept + context_sum + phon_sum + 
+    (1 + context_sum + phon_sum | participant) + 
+    (1 + context_sum + phon_sum | speaker) + 
+    (1 | item)
+)
+
+# Get priors
+get_prior(
+  formula = bf_mod_phon, 
+  family = bernoulli(link = "logit"), 
+  data = pilot_data
+) %>% 
+  as_tibble() %>% 
+  select(prior, class, coef) %>% 
+  knitr::kable(format = "pandoc")
+
+prior_mod_phon <- c(
+  prior(normal(0, 1), class = "b"), 
+  prior(cauchy(0, 0.2), class = "sd"), 
+  prior(lkj(1), class = "cor")
+)
+
+mod_phon <- brm(
+  formula = bf_mod_phon, 
+  family = bernoulli(link = "logit"), 
+  prior = prior_mod_phon, 
+  iter = 2000, warmup = 1000, cores = 4, threads = threading(2), 
+  backend = "cmdstanr", 
+  control = list(adapt_delta = 0.99), 
+  data = pilot_data, 
+  file = here("models", "mod_phon")
+)
+
+post_mod_phon <- as_draws_df(mod_phon) %>% 
+  select(starts_with("b_")) %>% 
+  pivot_longer(cols = everything(), names_to = "term", values_to = "estimate") 
+
+post_mod_phon_tbl <- post_mod_phon %>% 
+  group_by(term) %>% 
+  median_qi() %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  transmute(term, estimate, .lower, .upper, 
+    print_out = glue("{estimate} [{.lower}, {.upper}]"))
+
+post_mod_phon %>% 
+  ggplot() + 
+  aes(x = estimate, y = term, fill = stat(x <= 0.1 & x >= -0.1)) + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  geom_rect(data = tibble(xmin = -0.1, xmax = 0.1), 
+    inherit.aes = F, fill = "lightblue", color = "white", alpha = 0.2,
+    aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf)) +
+  stat_halfeye(show.legend = F, pch = 21, point_fill = "white") + 
+  scale_fill_manual(values = viridis::viridis_pal(
+    option = "D", begin = 0.3, end = 0.8)(2)) + 
+  coord_cartesian(xlim = c(-1, 1)) + 
+  labs(y = NULL, x = "P(correct)") + 
+  ds4ling::ds4ling_bw_theme()
+
+as_draws_df(mod_phon) %>% 
+  select(starts_with("r_participant")) %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "participant", values_to = "estimate") %>% 
+  mutate(participant = str_remove_all(participant, "r_participant\\["), 
+    participant = str_remove_all(participant, "\\]")) %>% 
+  separate(participant, into = c("participant", "term"), sep = ",") %>% 
+  mutate(participant = fct_reorder(participant, estimate, median), 
+         term = fct_relevel(term, "Intercept")) %>% 
+  ggplot() + 
+  aes(x = estimate, y = participant, fill = term) + 
+  facet_grid(. ~ term, scales = "free_x") + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  stat_pointinterval(show.legend = F, pch = 21, point_fill = "white", 
+    point_size = 1.5) + 
+  ds4ling::ds4ling_bw_theme() + 
+  theme(axis.ticks.y = element_blank(), axis.text.y = element_blank())
+
+
+as_draws_df(mod_phon) %>% 
+  select(starts_with("r_item")) %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "item", values_to = "estimate") %>% 
+  mutate(item = str_remove_all(item, "r_item\\["), 
+    item = str_remove_all(item, ",Intercept\\]"), 
+    item = fct_reorder(item, estimate, median)) %>% 
+  ggplot() + 
+  aes(x = estimate, y = item) + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  stat_halfeye(show.legend = F, pch = 21, point_fill = "white") + 
+  coord_cartesian(xlim = c(-2.5, 2.5)) + 
+  ds4ling::ds4ling_bw_theme()
+
+as_draws_df(mod_phon) %>% 
+  select(starts_with("r_speaker")) %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "speaker", values_to = "estimate") %>% 
+  mutate(speaker = str_remove_all(speaker, "r_speaker\\["), 
+    speaker = str_remove_all(speaker, "\\]")) %>% 
+  separate(speaker, into = c("speaker", "term"), sep = ",") %>% 
+  mutate(speaker = fct_reorder(speaker, estimate, median), 
+         term = fct_relevel(term, "Intercept")) %>% 
+  ggplot() + 
+  aes(x = estimate, y = speaker) + 
+  facet_grid(. ~ term, scales = "free_x") + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  stat_halfeye(show.legend = F, pch = 21, point_fill = "white") + 
+  coord_cartesian(xlim = c(-0.5, 0.5)) + 
+  ds4ling::ds4ling_bw_theme()
+
+```
+
+Adding `phon` added uncertainty. 
+Now we check the interaction. 
+
+
+
+
+
+### Full model
+
+```{r}
+#| label: full-mod
+
+# model formula
+bf_mod_full <- bf(
+  is_correct ~ 0 + Intercept + context_sum * phon_sum + 
+    (1 + context_sum * phon_sum | participant) + 
+    (1 + context_sum * phon_sum | speaker) + 
+    (1 | item)
+)
+
+# Get priors
+get_prior(
+  formula = bf_mod_full, 
+  family = bernoulli(link = "logit"), 
+  data = pilot_data
+) %>% 
+  as_tibble() %>% 
+  select(prior, class, coef) %>% 
+  knitr::kable(format = "pandoc")
+
+prior_mod_full <- c(
+  prior(normal(0, 1), class = "b"), 
+  prior(cauchy(0, 0.2), class = "sd"), 
+  prior(lkj(1), class = "cor")
+)
+
+mod_full <- brm(
+  formula = bf_mod_full, 
+  family = bernoulli(link = "logit"), 
+  prior = prior_mod_full, 
+  iter = 2000, warmup = 1000, cores = 4, threads = threading(2), 
+  backend = "cmdstanr", 
+  control = list(adapt_delta = 0.99), 
+  data = pilot_data, 
+  file = here("models", "mod_full")
+)
+
+post_mod_full <- as_draws_df(mod_full) %>% 
+  select(starts_with("b_")) %>% 
+  pivot_longer(cols = everything(), names_to = "term", values_to = "estimate") 
+
+post_mod_full_tbl <- post_mod_full %>% 
+  group_by(term) %>% 
+  median_qi() %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  transmute(term, estimate, .lower, .upper, 
+    print_out = glue("{estimate} [{.lower}, {.upper}]"))
+
+post_mod_full %>% 
+  ggplot() + 
+  aes(x = estimate, y = term, fill = stat(x <= 0.1 & x >= -0.1)) + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  geom_rect(data = tibble(xmin = -0.1, xmax = 0.1), 
+    inherit.aes = F, fill = "lightblue", color = "white", alpha = 0.2,
+    aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf)) +
+  stat_halfeye(show.legend = F, pch = 21, point_fill = "white") + 
+  scale_fill_manual(values = viridis::viridis_pal(
+    option = "D", begin = 0.3, end = 0.8)(2)) + 
+  coord_cartesian(xlim = c(-1, 1)) + 
+  labs(y = NULL, x = "P(correct)") + 
+  ds4ling::ds4ling_bw_theme()
+
+as_draws_df(mod_full) %>% 
+  select(starts_with("r_participant")) %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "participant", values_to = "estimate") %>% 
+  mutate(participant = str_remove_all(participant, "r_participant\\["), 
+    participant = str_remove_all(participant, "\\]")) %>% 
+  separate(participant, into = c("participant", "term"), sep = ",") %>% 
+  mutate(participant = fct_reorder(participant, estimate, median), 
+         term = fct_relevel(term, "Intercept")) %>% 
+  ggplot() + 
+  aes(x = estimate, y = participant, fill = term) + 
+  facet_grid(. ~ term, scales = "free_x") + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  stat_halfeye(show.legend = F, pch = 21, point_fill = "white") + 
+  ds4ling::ds4ling_bw_theme()
+
+as_draws_df(mod_full) %>% 
+  select(starts_with("r_item")) %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "item", values_to = "estimate") %>% 
+  mutate(item = str_remove_all(item, "r_item\\["), 
+    item = str_remove_all(item, ",Intercept\\]"), 
+    item = fct_reorder(item, estimate, median)) %>% 
+  ggplot() + 
+  aes(x = estimate, y = item) + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  stat_halfeye(show.legend = F, pch = 21, point_fill = "white") + 
+  coord_cartesian(xlim = c(-2.5, 2.5)) + 
+  ds4ling::ds4ling_bw_theme()
+
+as_draws_df(mod_full) %>% 
+  select(starts_with("r_speaker")) %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "speaker", values_to = "estimate") %>% 
+  mutate(speaker = str_remove_all(speaker, "r_speaker\\["), 
+    speaker = str_remove_all(speaker, "\\]")) %>% 
+  separate(speaker, into = c("speaker", "term"), sep = ",") %>% 
+  mutate(speaker = fct_reorder(speaker, estimate, median), 
+         term = fct_relevel(term, "Intercept")) %>% 
+  ggplot() + 
+  aes(x = estimate, y = speaker) + 
+  facet_grid(. ~ term, scales = "free_x") + 
+  geom_vline(xintercept = 0, lty = 3) + 
+  stat_halfeye(show.legend = F, pch = 21, point_fill = "white") + 
+  coord_cartesian(xlim = c(-0.5, 0.5)) + 
+  ds4ling::ds4ling_bw_theme()
+
+mod_full %>% 
+  emmeans(spec = ~ context_sum * phon_sum, 
+          epred = T) %>% 
+  gather_emmeans_draws() %>% 
+  mutate(context = if_else(context_sum == -1, "v_cv", "vc_v"), 
+         phon = if_else(phon_sum == -1, "n", "s")) %>% 
+  ggplot(., aes(x = .value, y = context, fill = phon)) + 
+  geom_vline(xintercept = 0.5, lty = 3) + 
+  stat_halfeye(position = position_dodge(0.5), slab_alpha = 0.3, pch = 21) + 
+  scale_fill_manual(values = viridis::viridis_pal(
+    option = "D", begin = 0.3, end = 0.8)(2)) + 
+  coord_cartesian(xlim = c(0, 1)) + 
+  labs(y = NULL, x = "P(Correct)") + 
+  ds4ling::ds4ling_bw_theme()
+
+mod_full %>% 
+  emmeans(~ context_sum * phon_sum, 
+          epred = TRUE) %>% 
+  gather_emmeans_draws() %>% 
+  ungroup() %>% 
+  mutate(context = if_else(context_sum == -1, "v_cv", "vc_v"), 
+         phon = if_else(phon_sum == -1, "n", "s")) %>% 
+  select(context, phon, .draw, .value) %>% 
+  pivot_wider(names_from = c("context", "phon"), values_from = ".value") %>% 
+  summarize(v_cv_n = pd(v_cv_n, null = 0.5)[1], 
+            v_cv_s = pd(v_cv_s, null = 0.5)[1], 
+            vc_v_n = pd(vc_v_n, null = 0.5)[1], 
+            vc_v_s = pd(vc_v_s, null = 0.5)[1]) %>% 
+  pivot_longer(cols = everything(), names_to = "term", values_to = "PD") %>% 
+  knitr::kable(format = "pandoc")
+
+describe_posterior(mod_full) %>% 
+  knitr::kable()
+```
