@@ -288,13 +288,9 @@ as_draws_df(mod_null) %>%
 
 ```
 
-The model intercept is `r post_mod_null_tbl$print_out[2]` in the probability space. This means that given the data, the model, and our prior assumptions, we are 95% confident that the true estimate is between `r post_mod_null_tbl$.lower[2]` and `r post_mod_null_tbl$.upper[2]`.
-Now we include the phonetic context to account for resyllabification. 
-
-
+The model intercept is `r post_mod_null_tbl$print_out[2]` in the probability space. This means that given the data, the model, and our prior assumptions, we are 95% confident that the true estimate is between `r post_mod_null_tbl$.lower[2]` and `r post_mod_null_tbl$.upper[2]`. Now we include the phonetic context to account for resyllabification.
 
 ### Context model
-
 
 ```{r}
 #| label: context-mod
@@ -410,19 +406,7 @@ as_draws_df(mod_context) %>%
 
 ```
 
-Adding `context` to the model increases the intercept estimate, but also increases our uncertainty about that estimate. 
-Based on the plots from the raw data, this is no surprise. 
-We need to add `phon` and the interaction between `context` and `phon`. 
-
-
-
-
-
-
-
-
-
-
+Adding `context` to the model increases the intercept estimate, but also increases our uncertainty about that estimate. Based on the plots from the raw data, this is no surprise. We need to add `phon` and the interaction between `context` and `phon`.
 
 ### Phon model
 
@@ -541,12 +525,7 @@ as_draws_df(mod_phon) %>%
 
 ```
 
-Adding `phon` added uncertainty. 
-Now we check the interaction. 
-
-
-
-
+Adding `phon` added uncertainty. Now we check the interaction.
 
 ### Full model
 
